@@ -323,7 +323,11 @@ def draw_background(screen: pygame.Surface) -> None:
 
 def handle_wall_collision(blob: Blob) -> tuple[bool, bool]:
     """
-    Check if a wax blob has collided with the angled lamp walls and adjusts the velocity if a collision is detected.
+    Check if a wax blob has collided with the angled lamp walls and adjusts the velocity if a collision is detected. If
+    the blob collides with the wall while rising, it glides up the interior side of the wall at a speed equal to the
+    projection of the blob's initial velocity onto the wall-parallel vector. If the wax collides with the wall while
+    moving downwards, it loses its horizontal velocity and drops straight down. This is a very basic method of
+    modelling the velocity lost from the inelastic collision of wax with the walls of the lamp.
     :param Blob blob: wax blob being checked
     :return: A pair of boolean values, the first for if the wax blob has collided with the left wall, the latter for
     if the wax blob has collided with the right wall. The return values are for debugging purposes.
@@ -339,8 +343,8 @@ def handle_wall_collision(blob: Blob) -> tuple[bool, bool]:
     collided_left = False
     collided_right = False
 
-    # Left wall collision (using left_vector)
-    if blob.distance_left <= blob.radius and blob.vy < 0:  # Check if the blob collides with the left wall as it moves up
+    # Left wall collision (using left_vector) while moving up
+    if blob.distance_left <= blob.radius and blob.vy < 0:
         collided_left = True
         relative_velocity = np.array([blob.vx, blob.vy])
 
@@ -351,8 +355,20 @@ def handle_wall_collision(blob: Blob) -> tuple[bool, bool]:
         blob.vx = dot_product_left * left_vector[0]
         blob.vy = dot_product_left * left_vector[1]
 
-    # Right wall collision (using right_vector)
-    elif blob.distance_right <= blob.radius and blob.vy < 0:  # Check if the blob collides with the right wall as it moves up
+    # Left wall collision (using left_vector) while moving down
+    if blob.distance_left <= blob.radius and blob.vy > 0:
+        collided_left = True
+        relative_velocity = np.array([blob.vx, blob.vy])
+
+        # Calculate the dot product of velocity and wall direction vector
+        dot_product_left = np.dot(relative_velocity, left_vector)
+
+        # Set the velocity parallel to the wall using the dot product
+        blob.vx = 0
+        blob.vy = dot_product_left * left_vector[1]
+
+    # Right wall collision (using right_vector) while moving up
+    elif blob.distance_right <= blob.radius and blob.vy < 0:
         collided_right = True
         relative_velocity = np.array([blob.vx, blob.vy])
 
@@ -361,6 +377,18 @@ def handle_wall_collision(blob: Blob) -> tuple[bool, bool]:
 
         # Set the velocity parallel to the wall using the dot product
         blob.vx = dot_product_right * right_vector[0]
+        blob.vy = dot_product_right * right_vector[1]
+
+    # Right wall collision (using right_vector) while moving down
+    elif blob.distance_right <= blob.radius and blob.vy < 0:
+        collided_right = True
+        relative_velocity = np.array([blob.vx, blob.vy])
+
+        # Calculate the dot product of velocity and wall direction vector
+        dot_product_right = np.dot(relative_velocity, right_vector)
+
+        # Set the velocity parallel to the wall using the dot product
+        blob.vx = 0
         blob.vy = dot_product_right * right_vector[1]
 
     return collided_left, collided_right
