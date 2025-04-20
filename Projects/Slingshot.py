@@ -86,7 +86,7 @@ def main():
 
                 angle = math.atan2(dy, dx)
                 distance = math.hypot(dx, dy)
-                speed = distance / max_extent * 500
+                speed = distance / max_extent * 900
                 vx = -math.cos(angle) * speed
                 vy = -math.sin(angle) * speed
                 projectile = Projectile(pouch_pos[0], pouch_pos[1], vx, vy)
