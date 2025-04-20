@@ -18,7 +18,6 @@ max_extent = 100
 arm_height = 60
 arm_spread = 30
 grip_height = 40
-slingshot_launch_origin = (slingshot_x, slingshot_y - arm_height)
 
 # Target properties
 targets = [(700, 100), (700, 300), (700, 500)]
@@ -68,6 +67,7 @@ def main():
 
     slingshot_retracted = False
     projectile = None
+    pouch_pos = (slingshot_x, slingshot_y - arm_height)  # default
 
     running = True
     while running:
@@ -77,9 +77,8 @@ def main():
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 slingshot_retracted = True
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1 and slingshot_retracted:
-                mouse_x, mouse_y = event.pos
-                dx = mouse_x - slingshot_launch_origin[0]
-                dy = mouse_y - slingshot_launch_origin[1]
+                dx = pouch_pos[0] - slingshot_x
+                dy = pouch_pos[1] - (slingshot_y - arm_height)
 
                 if dx >= 0:
                     slingshot_retracted = False
@@ -90,7 +89,7 @@ def main():
                 speed = distance / max_extent * 500
                 vx = -math.cos(angle) * speed
                 vy = -math.sin(angle) * speed
-                projectile = Projectile(slingshot_x, slingshot_y - arm_height, vx, vy)
+                projectile = Projectile(pouch_pos[0], pouch_pos[1], vx, vy)
                 slingshot_retracted = False
 
         screen.fill(white)
@@ -102,14 +101,15 @@ def main():
         if slingshot_retracted:
             mouse_x, mouse_y = pygame.mouse.get_pos()
             dx = mouse_x - slingshot_x
-            dy = mouse_y - slingshot_y
+            dy = mouse_y - (slingshot_y - arm_height)
             angle = math.atan2(dy, dx)
             distance = min(math.hypot(dx, dy), max_extent)
-            end_x = slingshot_x + math.cos(angle) * distance
-            end_y = slingshot_y + math.sin(angle) * distance
+            pouch_x = slingshot_x + math.cos(angle) * distance
+            pouch_y = (slingshot_y - arm_height) + math.sin(angle) * distance
+            pouch_pos = (pouch_x, pouch_y)
 
-            pygame.draw.line(screen, black, left_tip, (end_x, end_y), 2)
-            pygame.draw.line(screen, black, right_tip, (end_x, end_y), 2)
+            pygame.draw.line(screen, black, left_tip, pouch_pos, 2)
+            pygame.draw.line(screen, black, right_tip, pouch_pos, 2)
 
         # Draw targets
         for target in targets:
