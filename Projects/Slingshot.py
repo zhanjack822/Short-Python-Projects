@@ -2,25 +2,33 @@ import pygame
 import math
 
 # Window size
-WIDTH, HEIGHT = 800, 600
+width, height = 800, 600
 
 # Colors
-WHITE = (255, 255, 255)
-RED = (255, 0, 0)
+white = (255, 255, 255)
+red = (255, 0, 0)
+brown = (139, 69, 19)
+dark_brown = (101, 67, 33)
+green = (0, 255, 0)
+black = (0, 0, 0)
 
 # Slingshot properties
-SLINGSHOT_X, SLINGSHOT_Y = 50, HEIGHT // 2
-SLINGSHOT_RADIUS = 20
-MAX_EXTENT = 200
+slingshot_x, slingshot_y = 150, height // 2
+max_extent = 100
+arm_height = 60
+arm_spread = 30
+grip_height = 40
+slingshot_launch_origin = (slingshot_x, slingshot_y - arm_height)
 
 # Target properties
-TARGETS = [(700, 100), (700, 300), (700, 500)]
+targets = [(700, 100), (700, 300), (700, 500)]
 
 # Projectile properties
-PROJECTILE_RADIUS = 10
+projectile_radius = 10
 
-# Gravity
-GRAVITY = 9.81
+# Gravity (pixels per second squared)
+gravity = 981
+
 
 class Projectile:
     def __init__(self, x, y, vx, vy):
@@ -32,18 +40,33 @@ class Projectile:
     def update(self, dt):
         self.x += self.vx * dt
         self.y += self.vy * dt
-        self.vy += GRAVITY * dt
+        self.vy += gravity * dt
 
     def draw(self, screen):
-        pygame.draw.circle(screen, RED, (int(self.x), int(self.y)), PROJECTILE_RADIUS)
+        pygame.draw.circle(screen, red, (int(self.x), int(self.y)), projectile_radius)
+
+
+def draw_slingshot(screen):
+    # Prong tips
+    left_arm_top = (slingshot_x - arm_spread, slingshot_y - arm_height)
+    right_arm_top = (slingshot_x + arm_spread, slingshot_y - arm_height)
+
+    # Arms (Y shape)
+    pygame.draw.line(screen, brown, (slingshot_x, slingshot_y), left_arm_top, 6)
+    pygame.draw.line(screen, brown, (slingshot_x, slingshot_y), right_arm_top, 6)
+
+    # Handle
+    pygame.draw.rect(screen, dark_brown, (slingshot_x - 5, slingshot_y, 10, grip_height))
+
+    return left_arm_top, right_arm_top
+
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen = pygame.display.set_mode((width, height))
     clock = pygame.time.Clock()
 
     slingshot_retracted = False
-    slingshot_start = (0, 0)
     projectile = None
 
     running = True
@@ -52,48 +75,58 @@ def main():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                slingshot_start = event.pos
                 slingshot_retracted = True
             elif event.type == pygame.MOUSEBUTTONUP and event.button == 1 and slingshot_retracted:
                 mouse_x, mouse_y = event.pos
-                dx = mouse_x - SLINGSHOT_X
-                dy = mouse_y - SLINGSHOT_Y
+                dx = mouse_x - slingshot_launch_origin[0]
+                dy = mouse_y - slingshot_launch_origin[1]
+
+                if dx >= 0:
+                    slingshot_retracted = False
+                    continue  # Only allow pulling left
+
                 angle = math.atan2(dy, dx)
                 distance = math.hypot(dx, dy)
-                speed = distance / MAX_EXTENT * 500
-                vx = math.cos(angle) * speed
-                vy = math.sin(angle) * speed
-                projectile = Projectile(SLINGSHOT_X, SLINGSHOT_Y, vx, vy)
+                speed = distance / max_extent * 500
+                vx = -math.cos(angle) * speed
+                vy = -math.sin(angle) * speed
+                projectile = Projectile(slingshot_x, slingshot_y - arm_height, vx, vy)
                 slingshot_retracted = False
 
-        screen.fill(WHITE)
+        screen.fill(white)
 
+        # Draw slingshot and get prong tips
+        left_tip, right_tip = draw_slingshot(screen)
+
+        # Draw elastic band if pulled
         if slingshot_retracted:
             mouse_x, mouse_y = pygame.mouse.get_pos()
-            dx = mouse_x - SLINGSHOT_X
-            dy = mouse_y - SLINGSHOT_Y
+            dx = mouse_x - slingshot_x
+            dy = mouse_y - slingshot_y
             angle = math.atan2(dy, dx)
-            distance = min(math.hypot(dx, dy), MAX_EXTENT)
-            end_x = SLINGSHOT_X + math.cos(angle) * distance
-            end_y = SLINGSHOT_Y + math.sin(angle) * distance
-            pygame.draw.line(screen, (0, 0, 0), (SLINGSHOT_X, SLINGSHOT_Y), (end_x, end_y), 5)
+            distance = min(math.hypot(dx, dy), max_extent)
+            end_x = slingshot_x + math.cos(angle) * distance
+            end_y = slingshot_y + math.sin(angle) * distance
 
-        for target in TARGETS:
-            pygame.draw.circle(screen, (0, 255, 0), target, 20)
+            pygame.draw.line(screen, black, left_tip, (end_x, end_y), 2)
+            pygame.draw.line(screen, black, right_tip, (end_x, end_y), 2)
 
+        # Draw targets
+        for target in targets:
+            pygame.draw.circle(screen, green, target, 20)
+
+        # Update and draw projectile
         if projectile:
             projectile.update(1 / 60)
             projectile.draw(screen)
-            if projectile.x > WIDTH or projectile.y > HEIGHT:
+            if projectile.x > width or projectile.y > height:
                 projectile = None
-
-        pygame.draw.circle(screen, (0, 0, 0), (SLINGSHOT_X, SLINGSHOT_Y), SLINGSHOT_RADIUS)
 
         pygame.display.flip()
         clock.tick(60)
 
     pygame.quit()
 
+
 if __name__ == "__main__":
     main()
-
