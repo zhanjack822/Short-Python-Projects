@@ -102,7 +102,36 @@ nightstand_color = (180, 140, 100)  # Wood-like tone
 
 # Blob properties
 class Blob:
-    def __init__(self, x, y, radius):
+    """
+    Represents a wax blob inside the lava lamp.
+
+    Attributes
+    ----------
+    x : float
+        The horizontal position of the blob.
+    y : float
+        The vertical position of the blob.
+    radius : int
+        The radius of the blob.
+    temperature : float
+        The current temperature of the blob in Celsius.
+    density : float
+        The current density of the blob in kg/m^3.
+    vy : float
+        The vertical velocity of the blob.
+    vx : float
+        The horizontal velocity of the blob.
+    collided_left : bool
+        Whether the blob is currently colliding with the left wall.
+    collided_right : bool
+        Whether the blob is currently colliding with the right wall.
+    distance_left : float
+        Distance from the left wall.
+    distance_right : float
+        Distance from the right wall.
+    """
+
+    def __init__(self, x: float, y: float, radius: int):
         self.x = x
         self.y = y
         self.radius = radius
@@ -115,10 +144,21 @@ class Blob:
         self.distance_left = 0
         self.distance_right = 0
 
-    def calculate_density(self):
+    def calculate_density(self) -> float:
+        """
+        Calculate the current density of the blob based on its temperature using the linear thermal expansion model.
+
+        :return: Updated density of the blob
+        """
         return opaque_density_at_reference * (1 + coefficient_of_expansion * (self.temperature - reference_temperature))
 
-    def update(self, temp_profile):
+    def update(self, temp_profile: list[float]) -> None:
+        """
+        Update the blob's temperature, density, and position based on buoyancy and collisions.
+
+        :param temp_profile: The vertical temperature profile in the lamp
+        :return: None
+        """
         solvent_temp = get_temperature_at_y(self.y, temp_profile)
 
         # Newton's law of heating
@@ -149,16 +189,39 @@ class Blob:
         # Update horizontal position
         self.x += self.vx
 
-    def draw(self, screen):
+    def draw(self, screen: pygame.Surface) -> None:
+        """
+        Draws the updated or initialized blobs
+
+        :param pygame.Surface screen: screen that blobs will be drawn on
+        :return: None
+        """
+
         pygame.draw.circle(screen, opaque_color, (int(self.x), int(self.y)), self.radius)
 
 
-def interpolate_color(cold, hot, t):
-    """Linearly interpolate between two RGB colors."""
+def interpolate_color(cold: tuple[int, int, int], hot: tuple[int, int, int], t: float) -> tuple[int, ...]:
+    """
+    Linearly interpolate between two RGB colors to draw a colour gradient
+    :param tuple[int, int, int] cold: cold colour RGB
+    :param tuple[int, int, int] hot: hot colour RBG
+    :param float t: scaled parameter between 0 and 1, indicating how far along the gradient to return an interpolated
+    colour for
+    :return: RBG colour between the hot and cold colours
+    """
+
     return tuple(int(c + (h - c) * t) for c, h, t in zip(cold, hot, [t]*3))
 
 
-def draw_temperature_gradient(screen, temps):
+def draw_temperature_gradient(screen: pygame.Surface, temps: list[float]) -> None:
+    """
+    Draw a vertical temperature gradient inside the lava lamp's fluid chamber
+
+    :param pygame.Screen screen: screen surface that the gradient will be drawn on
+    :param temps: list of temperature values for each step within the gradient
+    :return: None
+    """
+
     # Create a transparent surface
     gradient_surface = pygame.Surface((width, height), pygame.SRCALPHA)
 
@@ -181,7 +244,14 @@ def draw_temperature_gradient(screen, temps):
     screen.blit(gradient_surface, (0, 0))
 
 # Heat diffusion function
-def update_temperature_profile(temps):
+def update_temperature_profile(temps: list[float]) -> list[float]:
+    """
+    Update the temperature profile using the 1D heat equation.
+
+    :param list[float] temps: list of temperature values for each step of the current temperature profile
+    :return: list of temperature values for the updated temperature profile
+    """
+
     new_temps = temps.copy()
     for i in range(1, len(temps) - 1):
         new_temps[i] = temps[i] + alpha * dt / dx**2 * (temps[i+1] - 2*temps[i] + temps[i-1])
@@ -190,7 +260,14 @@ def update_temperature_profile(temps):
     return new_temps
 
 # Map vertical position to temperature
-def get_temperature_at_y(y, temps=None):
+def get_temperature_at_y(y: float, temps: list[float] = None) -> float:
+    """
+    Map  a vertical coordinate to its corresponding temperature.
+    :param float y: y-coordinate being checked
+    :param list[float] temps: temperature profile
+    :return: The temperature at the given y coordinate within the temperature profile
+    """
+
     index = int((y - lamp_y) / lamp_height * (steps - 1))
     index = max(0, min(steps - 1, index))
     if temps:
@@ -198,7 +275,13 @@ def get_temperature_at_y(y, temps=None):
     else:
         return bottom_temp + (top_temp - bottom_temp) * (index / steps)
 
-def draw_lamp(screen) -> None:
+def draw_lamp(screen: pygame.Surface) -> None:
+    """
+    Draw the lamp's structure
+    :param pygame.Surface screen: pygame surface on which the lamp is to be drawn
+    :return: None
+    """
+
     # draw the lamp top
     pygame.draw.polygon(screen, metallic_silver, top, 2)
     pygame.draw.polygon(screen, metallic_silver, top)
@@ -212,11 +295,22 @@ def draw_lamp(screen) -> None:
     pygame.draw.polygon(screen, metallic_silver, base_lower)
 
 
-def draw_blobs(screen, blobs):
+def draw_blobs(screen: pygame.Surface, blobs: list[Blob]) -> None:
+    """
+    Draw the wax blobs
+    :param pygame.Surface screen: pygame surface on which the wax blobs are drawn
+    :param list[Blob] blobs: list of Blobs to be drawn
+    :return: None
+    """
     for blob in blobs:
         blob.draw(screen)
 
-def draw_background(screen):
+def draw_background(screen: pygame.Surface) -> None:
+    """
+    Draws the background for the simulation
+    :param pygame.Surface screen: pygame surface on which the background is drawn
+    :return: None
+    """
     # Background wall color
     wall_color = (230, 210, 255)  # Light lavender/pink
 
@@ -228,6 +322,16 @@ def draw_background(screen):
 
 
 def handle_wall_collision(blob: Blob) -> tuple[bool, bool]:
+    """
+    Check if a wax blob has collided with the angled lamp walls and adjusts the velocity if a collision is detected. If
+    the blob collides with the wall while rising, it glides up the interior side of the wall at a speed equal to the
+    projection of the blob's initial velocity onto the wall-parallel vector. If the wax collides with the wall while
+    moving downwards, it loses its horizontal velocity and drops straight down. This is a very basic method of
+    modelling the velocity lost from the inelastic collision of wax with the walls of the lamp.
+    :param Blob blob: wax blob being checked
+    :return: A pair of boolean values, the first for if the wax blob has collided with the left wall, the latter for
+    if the wax blob has collided with the right wall. The return values are for debugging purposes.
+    """
     blob_pos = np.array([blob.x, blob.y])
 
     disp_br = np.array(bottom_right) - blob_pos  # displacement to bottom right corner
@@ -239,8 +343,8 @@ def handle_wall_collision(blob: Blob) -> tuple[bool, bool]:
     collided_left = False
     collided_right = False
 
-    # Left wall collision (using left_vector)
-    if blob.distance_left <= blob.radius and blob.vy < 0:  # Check if the blob collides with the left wall as it moves up
+    # Left wall collision (using left_vector) while moving up
+    if blob.distance_left <= blob.radius and blob.vy < 0:
         collided_left = True
         relative_velocity = np.array([blob.vx, blob.vy])
 
@@ -251,8 +355,20 @@ def handle_wall_collision(blob: Blob) -> tuple[bool, bool]:
         blob.vx = dot_product_left * left_vector[0]
         blob.vy = dot_product_left * left_vector[1]
 
-    # Right wall collision (using right_vector)
-    elif blob.distance_right <= blob.radius and blob.vy < 0:  # Check if the blob collides with the right wall as it moves up
+    # Left wall collision (using left_vector) while moving down
+    if blob.distance_left <= blob.radius and blob.vy > 0:
+        collided_left = True
+        relative_velocity = np.array([blob.vx, blob.vy])
+
+        # Calculate the dot product of velocity and wall direction vector
+        dot_product_left = np.dot(relative_velocity, left_vector)
+
+        # Set the velocity parallel to the wall using the dot product
+        blob.vx = 0
+        blob.vy = dot_product_left * left_vector[1]
+
+    # Right wall collision (using right_vector) while moving up
+    elif blob.distance_right <= blob.radius and blob.vy < 0:
         collided_right = True
         relative_velocity = np.array([blob.vx, blob.vy])
 
@@ -263,19 +379,42 @@ def handle_wall_collision(blob: Blob) -> tuple[bool, bool]:
         blob.vx = dot_product_right * right_vector[0]
         blob.vy = dot_product_right * right_vector[1]
 
+    # Right wall collision (using right_vector) while moving down
+    elif blob.distance_right <= blob.radius and blob.vy < 0:
+        collided_right = True
+        relative_velocity = np.array([blob.vx, blob.vy])
+
+        # Calculate the dot product of velocity and wall direction vector
+        dot_product_right = np.dot(relative_velocity, right_vector)
+
+        # Set the velocity parallel to the wall using the dot product
+        blob.vx = 0
+        blob.vy = dot_product_right * right_vector[1]
+
     return collided_left, collided_right
 
 
-def draw_debug_info(screen, blobs):
+def draw_debug_info(screen: pygame.Surface, blobs: list[Blob]) -> None:
+    """
+    Adds a real time readout of each blob's density and temperature
+    :param pygame.Surface screen: pygame surface on which the debug information is drawn on
+    :param list[Blob] blobs: list of Blobs whose data is to be drawn
+    :return: None
+    """
     # Prepare font for debug text
     font = pygame.font.SysFont(None, 16)
 
     for blob in blobs:
-        debug_text = f"T={blob.temperature:.1f}°C ρ={blob.density:.1f}"
+        debug_text = f"T={blob.temperature:.1f}°C ρ={blob.density:.1f} kg/m^3"
         text_surface = font.render(debug_text, True, (0, 0, 0))
         screen.blit(text_surface, (blob.x + 10, blob.y - 10))
 
-def main():
+def main() -> int:
+    """
+    Main loop of the simulation. Initializes the window, spawns blobs, updates temperature and motion, and handles
+    drawing.
+    :return: Returns 0 if the game is closed correctly.
+    """
     pygame.init()
     screen = pygame.display.set_mode((width, height))
     pygame.display.set_caption("Lava Lamp Simulation")
@@ -334,6 +473,7 @@ def main():
         clock.tick(60)
 
     pygame.quit()
+    return 0
 
 if __name__ == "__main__":
     main()
