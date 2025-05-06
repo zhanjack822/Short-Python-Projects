@@ -172,8 +172,8 @@ def main():
                             status_text = f"Player {player}'s turn"
 
         # Draw everything
-        draw_reset_button()
         draw_status(status_text)
+        draw_reset_button()
         pygame.display.update()
 
 
