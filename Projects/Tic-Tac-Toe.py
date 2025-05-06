@@ -17,6 +17,7 @@ CROSS_WIDTH = 25
 SPACE = SQUARE_SIZE // 4
 BUTTON_HEIGHT = 50
 BUTTON_WIDTH = 200
+STATUS_AREA_HEIGHT = 150  # Define height of status area
 
 # Colors
 WHITE = (255, 255, 255)
@@ -111,6 +112,8 @@ def draw_reset_button():
 
 # Draw status text
 def draw_status(status_text):
+    # Clear the status area
+    pygame.draw.rect(screen, WHITE, (0, HEIGHT - STATUS_AREA_HEIGHT, WIDTH, STATUS_AREA_HEIGHT))
     status = font.render(status_text, True, BLACK)
     status_rect = status.get_rect(center=(WIDTH // 2, HEIGHT - BUTTON_HEIGHT - 60))
     screen.blit(status, status_rect)
@@ -169,7 +172,7 @@ def main():
                             status_text = f"Player {player}'s turn"
 
         # Draw everything
-        reset_button = draw_reset_button()
+        draw_reset_button()
         draw_status(status_text)
         pygame.display.update()
 
