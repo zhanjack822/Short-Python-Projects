@@ -6,7 +6,7 @@ pygame.init()
 
 # Constants
 WIDTH = 600
-HEIGHT = 600
+HEIGHT = 700  # Increased height to accommodate reset button and status
 LINE_WIDTH = 15
 BOARD_ROWS = 3
 BOARD_COLS = 3
@@ -15,17 +15,23 @@ CIRCLE_RADIUS = SQUARE_SIZE // 3
 CIRCLE_WIDTH = 15
 CROSS_WIDTH = 25
 SPACE = SQUARE_SIZE // 4
+BUTTON_HEIGHT = 50
+BUTTON_WIDTH = 200
 
 # Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 BLUE = (0, 0, 255)
+GRAY = (150, 150, 150)
 
 # Set up the display
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Tic Tac Toe')
 screen.fill(WHITE)
+
+# Font
+font = pygame.font.Font(None, 40)
 
 # Board
 board = [[None for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
@@ -33,13 +39,14 @@ board = [[None for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
 
 # Draw grid lines
 def draw_lines():
+    screen.fill(WHITE)
     # Horizontal lines
     for i in range(1, BOARD_ROWS):
         pygame.draw.line(screen, BLACK, (0, i * SQUARE_SIZE), (WIDTH, i * SQUARE_SIZE), LINE_WIDTH)
 
     # Vertical lines
     for i in range(1, BOARD_COLS):
-        pygame.draw.line(screen, BLACK, (i * SQUARE_SIZE, 0), (i * SQUARE_SIZE, HEIGHT), LINE_WIDTH)
+        pygame.draw.line(screen, BLACK, (i * SQUARE_SIZE, 0), (i * SQUARE_SIZE, WIDTH), LINE_WIDTH)
 
 
 # Draw X and O figures
@@ -91,11 +98,41 @@ def is_board_full():
     return all([board[row][col] is not None for row in range(BOARD_ROWS) for col in range(BOARD_COLS)])
 
 
+# Draw reset button
+def draw_reset_button():
+    button_rect = pygame.Rect((WIDTH - BUTTON_WIDTH) // 2, HEIGHT - BUTTON_HEIGHT - 20,
+                              BUTTON_WIDTH, BUTTON_HEIGHT)
+    pygame.draw.rect(screen, GRAY, button_rect)
+    text = font.render("Reset", True, BLACK)
+    text_rect = text.get_rect(center=button_rect.center)
+    screen.blit(text, text_rect)
+    return button_rect
+
+
+# Draw status text
+def draw_status(status_text):
+    status = font.render(status_text, True, BLACK)
+    status_rect = status.get_rect(center=(WIDTH // 2, HEIGHT - BUTTON_HEIGHT - 60))
+    screen.blit(status, status_rect)
+
+
+# Reset game
+def reset_game():
+    global board, game_over, player
+    board = [[None for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
+    game_over = False
+    player = 'X'
+    draw_lines()
+    return "Player X's turn"
+
+
 # Main game loop
 def main():
     draw_lines()
     player = 'X'
     game_over = False
+    status_text = "Player X's turn"
+    reset_button = draw_reset_button()
 
     while True:
         for event in pygame.event.get():
@@ -103,26 +140,39 @@ def main():
                 pygame.quit()
                 sys.exit()
 
-            if event.type == pygame.MOUSEBUTTONDOWN and not game_over:
-                mouseX = event.pos[0]
-                mouseY = event.pos[1]
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                mouseX, mouseY = event.pos
 
-                clicked_row = mouseY // SQUARE_SIZE
-                clicked_col = mouseX // SQUARE_SIZE
+                # Check if reset button is clicked
+                if reset_button.collidepoint(event.pos):
+                    status_text = reset_game()
+                    continue
 
-                if board[clicked_row][clicked_col] is None:
-                    board[clicked_row][clicked_col] = player
-                    draw_figures()
+                # Handle board clicks
+                if not game_over and mouseY < WIDTH:  # Only process clicks on the board
+                    clicked_row = mouseY // SQUARE_SIZE
+                    clicked_col = mouseX // SQUARE_SIZE
 
-                    if check_win(player):
-                        game_over = True
-                        print(f"Player {player} wins!")
-                    elif is_board_full():
-                        game_over = True
-                        print("It's a draw!")
-                    else:
-                        player = 'O' if player == 'X' else 'X'
+                    if board[clicked_row][clicked_col] is None:
+                        board[clicked_row][clicked_col] = player
+                        draw_figures()
 
+                        if check_win(player):
+                            game_over = True
+                            status_text = f"Player {player} wins!"
+                        elif is_board_full():
+                            game_over = True
+                            status_text = "It's a draw!"
+                        else:
+                            player = 'O' if player == 'X' else 'X'
+                            status_text = f"Player {player}'s turn"
+
+        # Redraw everything
+        screen.fill(WHITE, (0, WIDTH, WIDTH, HEIGHT - WIDTH))  # Clear status area
+        draw_lines()
+        draw_figures()
+        reset_button = draw_reset_button()
+        draw_status(status_text)
         pygame.display.update()
 
 
